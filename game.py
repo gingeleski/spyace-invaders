@@ -108,6 +108,11 @@ class GameLayer(cocos.layer.Layer):
             if shoot is not None:
                 self.add(shoot)
 
+        self.alien_group.update(dt)
+
+        if random.random() < 0.001:
+            self.add(MysteryShip(50, self.height - 50))
+
         for _, node in self.children:
             node.update(dt)
 
@@ -247,6 +252,17 @@ class HUD(cocos.layer.Layer):
         game_over = cocos.text.Label('Game over', font_size=50, anchor_x='center', anchor_y='center')
         game_over.position = w * 0.5, h * 0.5
         self.add(game_over)
+
+class MysteryShip(Alien):
+    SCORES = [10, 50, 100, 200]
+
+    def __init__(self, x, y):
+        score = random.choice(MysteryShip.SCORES)
+        super(MysteryShip, self).__init__('img/shiiiippp.png', x, y, score)
+        self.speed = eu.Vector2(150, 0)
+
+    def update(self, elapsed):
+        self.move(self.speed * elapsed)
 
 if __name__ == '__main__':
     cocos.director.director.init(caption='Spyace Invaders', width=800, height=650)
