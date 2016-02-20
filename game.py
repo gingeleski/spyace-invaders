@@ -7,6 +7,8 @@ from pyglet.window import key
 
 import cocos.layer
 
+from pyglet.image import load, ImageGrid, Animation
+
 class Actor(cocos.sprite.Sprite):
     def __init__(self, image, x, y):
         super(Actor, self).__init__(image)
@@ -72,7 +74,9 @@ class GameLayer(cocos.layer.Layer):
         self.score += score
 
     def create_alien_group(self, x, y):
-        pass
+        self.alien_group = AlienGroup(x, y)
+        for alien in self.alien_group:
+            self.add(alien)
 
     def update(self, dt):
         self.collman.clear()
@@ -90,6 +94,76 @@ class GameLayer(cocos.layer.Layer):
                 node.collide(other)
                 return True
         return False
+
+class Alien(Actor):
+    def load_animation(imgage):
+        seq = ImageGrid(load(imgage), 2, 1)
+        return Animation.from_image_sequence(seq, 0.5)
+
+    TYPES = {
+        '1': (load_animation('img/alien_1a.png'), 40),
+        '2': (load_animation('img/alien_2a.png'), 20),
+        '3': (load_animation('img/alien_3a.png'), 10)
+    }
+
+    def from_type(x, y, alien_type, column):
+        animation, score = Alien.TYPES[alien_type]
+        return Alien(animation, x, y, score, column)
+
+    def __init__(self, img, x, y, score, column=None):
+        super(Alien, self).__init__(img, x, y)
+        self.score = score
+        self.column = column
+
+    def on_exit(self):
+        super(Alien, self).on_exit()
+        if self.column:
+            self.column.remove(self)
+
+class AlienColumn(object):
+    def __init__(self, x, y):
+        alien_types = enumerate(['3', '3', '2', '2', '1'])
+        self.aliens = [Alien.from_type(x, y+i*60, alien, self) for i, alien in alien_types]
+
+    def remove(self, alien):
+        self.aliens.remove(alien)
+
+    def shoot(self):
+        pass
+
+    def should_turn(self, d):
+        if len(self.aliens) == 0:
+            return False
+        alien = self.aliens[0]
+        x, width = alien.x, alien.parent.width
+        return x >= width - 50 and d == 1 or x <= 50 and d == -1
+
+class AlienGroup(object):
+    def __init__(self, x, y):
+        self.columns = [AlienColumn(x + i * 60, y) for i in range(10)]
+        self.speed = eu.Vector2(10, 0)
+        self.direction = 1
+        self.elapsed = 0.0
+        self.period = 1.0
+
+    def update(self, elapsed):
+        self.elapsed += elapsed
+        while self.elapsed >= self.period:
+            self.elapsed -= self.period
+            offset = self.direction * self.speed
+            if self.side_reached():
+                self.direction *= -1
+                offset = eu.Vector2(0, -10)
+            for alien in self:
+                alien.move(offset)
+
+    def side_reached(self):
+        return any(map(lambda c: c.should_turn(self.direction), self.columns))
+
+    def __iter__(self):
+        for column in self.columns:
+            for alien in column.aliens:
+                yield alien
 
 if __name__ == '__main__':
     cocos.director.director.init(caption='Spyace Invaders', width=800, height=650)
