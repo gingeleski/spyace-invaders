@@ -111,7 +111,7 @@ class GameLayer(cocos.layer.Layer):
         self.alien_group.update(dt)
 
         if random.random() < 0.001:
-            self.add(MysteryShip(50, self.height - 50))
+            self.add(MysteryShip(80, self.height - 50))
 
         for _, node in self.children:
             node.update(dt)
